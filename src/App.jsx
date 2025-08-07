@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import LoginPage from "./pages/login";
@@ -16,17 +16,29 @@ import TransactionsTable from "./pages/transactionsTable";
 import SummaryCards from "./pages/summaryCards";
 import UserPage from "./pages/userpage";
 import Layout from "./component/layout";
+import SplashScreen from "./component/splashscreen";
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-
-
-
 const App = () => {
-  return (
-   <>
-        <ToastContainer position="top-right" autoClose={3000} />
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const splashTimer = setTimeout(() => {
+      setLoading(false);
+    }, 60000); // Show splash for 3 seconds
+
+    return () => clearTimeout(splashTimer);
+  }, []);
+
+  if (loading) {
+    return <SplashScreen />;
+  }
+
+  return (
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -35,7 +47,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <Dashboard />
+                <Dashboard />
               </Layout>
             </PrivateRoute>
           }
@@ -45,7 +57,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <AdminDashboard />
+                <AdminDashboard />
               </Layout>
             </PrivateRoute>
           }
@@ -55,7 +67,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <SalesDashboard />
+                <SalesDashboard />
               </Layout>
             </PrivateRoute>
           }
@@ -65,7 +77,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <MaterialsPage />
+                <MaterialsPage />
               </Layout>
             </PrivateRoute>
           }
@@ -75,7 +87,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <StockInPage />
+                <StockInPage />
               </Layout>
             </PrivateRoute>
           }
@@ -85,7 +97,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <StockOutPage />
+                <StockOutPage />
               </Layout>
             </PrivateRoute>
           }
@@ -95,7 +107,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <StockTable />
+                <StockTable />
               </Layout>
             </PrivateRoute>
           }
@@ -105,7 +117,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <TransactionsTable />
+                <TransactionsTable />
               </Layout>
             </PrivateRoute>
           }
@@ -115,9 +127,8 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <SummaryCards />
+                <SummaryCards />
               </Layout>
-              
             </PrivateRoute>
           }
         />
@@ -126,7 +137,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <Layout>
-              <UserPage />
+                <UserPage />
               </Layout>
             </PrivateRoute>
           }
