@@ -1,4 +1,7 @@
 // src/pages/Dashboard.jsx
+//adimin only
+//sales summary by each loged in user
+
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
@@ -8,7 +11,7 @@ const Dashboard = () => {
   const [totalStockIn, setTotalStockIn] = useState(0);
   const [totalStockOut, setTotalStockOut] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0); // 🔴 NEW
+  const [lowStockCount, setLowStockCount] = useState(0); 
 
   useEffect(() => {
     const fetchStats = async () => {

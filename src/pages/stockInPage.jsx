@@ -1,4 +1,6 @@
 // src/pages/AddMaterial.jsx
+//only adim should be able to add product
+
 import React, { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";

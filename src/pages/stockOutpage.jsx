@@ -1,4 +1,7 @@
 // src/pages/StockOut.jsx
+//total product list with search and filter tools 
+//New page or a modal for a checkout and print recipt function 
+//calculate total when the qty of goods is added
 import React, { useEffect, useState } from "react";
 import {
   collection,
