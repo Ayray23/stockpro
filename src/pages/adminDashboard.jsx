@@ -1,5 +1,5 @@
-// src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../component/sidebar";
 import Topbar from "../component/topbar";
 import { auth, db } from "../firebase";
@@ -7,11 +7,10 @@ import { signOut } from "firebase/auth";
 import { collection, getDocs, query, orderBy, limit, where } from "firebase/firestore";
 
 /**
- * AdminDashboard (wrapper)
- * - Desktop: sidebar pinned on left
- * - Mobile: slide-in sidebar toggled
- * - Uses Topbar for title + search
- * - Pulls data from 'products','transactions','users'
+ * AdminDashboard
+ * - Admin-only page
+ * - Sidebar highlights active route automatically
+ * - Dashboard summary + Quick Actions + Recent Sales
  */
 
 export default function AdminDashboard() {
@@ -21,32 +20,51 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [users, setUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-  // auth listener & profile fetch
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Detect current route for sidebar highlight
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes("product")) setActiveTab("products");
+    else if (path.includes("user")) setActiveTab("users");
+    else if (path.includes("sale")) setActiveTab("sales");
+    else if (path.includes("checkout")) setActiveTab("checkout");
+    else setActiveTab("dashboard");
+  }, [location]);
+
+  // Auth listener & role check
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
-      setCurrentUser(u);
       if (!u) {
-        setProfile(null);
+        navigate("/login");
         return;
       }
+      setCurrentUser(u);
+
       try {
         const q = query(collection(db, "users"), where("uid", "==", u.uid));
         const snap = await getDocs(q);
         const doc = snap.docs[0];
-        setProfile(doc ? { id: doc.id, ...doc.data() } : { email: u.email, role: "STAFF" });
+        const userData = doc ? { id: doc.id, ...doc.data() } : { email: u.email, role: "staff" };
+        setProfile(userData);
+
+        if (userData.role !== "admin") navigate("/unauthorized");
       } catch (err) {
-        console.error("profile fetch err", err);
-        setProfile({ email: u.email, role: "STAFF" });
+        console.error("Profile fetch error:", err);
+        navigate("/unauthorized");
       }
     });
     return () => unsub();
-  }, []);
+  }, [navigate]);
 
-  // fetch dashboard data
+  // Fetch dashboard data (only after admin verified)
   useEffect(() => {
+    if (!profile || profile.role !== "admin") return;
+
     let mounted = true;
     (async () => {
       try {
@@ -61,101 +79,128 @@ export default function AdminDashboard() {
         setTransactions(txSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
         setUsers(uSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
-        console.error("dashboard fetch err", err);
+        console.error("Dashboard data error:", err);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [profile]);
 
-  // derived
+  // Derived stats
   const totalUsers = users.length;
   const totalProducts = products.length;
   const lowStockCount = products.filter((p) => Number(p.quantity || 0) < 5).length;
   const recentSalesTotal = transactions.reduce((acc, tx) => {
-    const amt = tx.totalAmount ?? tx.total ?? tx.amount ?? (tx.items ? tx.items.reduce((a, it) => a + (it.total ?? 0), 0) : 0);
+    const amt =
+      tx.totalAmount ??
+      tx.total ??
+      tx.amount ??
+      (tx.items ? tx.items.reduce((a, it) => a + (it.total ?? 0), 0) : 0);
     return acc + Number(amt || 0);
   }, 0);
-
-  function navigate(path) {
-    // keep track of active tab for styles
-    const name = path.replace("/", "") || "dashboard";
-    setActiveTab(name);
-    // navigate
-    window.location.href = path;
-  }
 
   async function handleLogout() {
     try {
       await signOut(auth);
-      window.location.href = "/login";
+      navigate("/login");
     } catch (err) {
-      console.error("logout err", err);
+      console.error("Logout error:", err);
     }
+  }
+
+  const go = (path) => navigate(path);
+
+  if (!profile || profile.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-slate-700">Checking access...</h2>
+          <p className="text-slate-500 mt-2">Please wait while we verify your admin role.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Sidebar (desktop pinned) */}
+      {/* Sidebar for desktop */}
       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
-        <Sidebar open={true} onNavigate={navigate} user={{ email: profile?.email ?? currentUser?.email, role: profile?.role }} active={activeTab} theme="dark" />
+        <Sidebar
+          open={true}
+          onNavigate={go}
+          user={{ email: profile?.email ?? currentUser?.email, role: profile?.role }}
+          active={activeTab}
+          theme="dark"
+        />
       </div>
 
-      {/* Mobile Sidebar (drawer) */}
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={(p) => { setSidebarOpen(false); navigate(p); }} user={{ email: profile?.email ?? currentUser?.email, role: profile?.role }} active={activeTab} theme="dark" />
+      {/* Sidebar for mobile */}
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={(p) => {
+          setSidebarOpen(false);
+          go(p);
+        }}
+        user={{ email: profile?.email ?? currentUser?.email, role: profile?.role }}
+        active={activeTab}
+        theme="dark"
+      />
 
-      {/* Page content area */}
       <div className="md:pl-72">
-        {/* topbar */}
-        <Topbar title="Dashboard" onToggleSidebar={() => setSidebarOpen(true)} onSearch={(q) => console.log("search:", q)} />
+        <Topbar
+          title="Admin Dashboard"
+          onToggleSidebar={() => setSidebarOpen(true)}
+          onSearch={(q) => console.log("Search:", q)}
+        />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Stats row */}
+          {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-4 rounded-2xl shadow">
-              <div className="text-xs text-slate-400">Total Users</div>
-              <div className="mt-2 text-2xl font-semibold">{loading ? "..." : totalUsers}</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl shadow">
-              <div className="text-xs text-slate-400">Total Sales (Recent)</div>
-              <div className="mt-2 text-2xl font-semibold">₦{loading ? "..." : Number(recentSalesTotal).toLocaleString()}</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl shadow">
-              <div className="text-xs text-slate-400">Low Stock</div>
-              <div className="mt-2 text-2xl font-semibold">{loading ? "..." : lowStockCount}</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl shadow">
-              <div className="text-xs text-slate-400">Total Products</div>
-              <div className="mt-2 text-2xl font-semibold">{loading ? "..." : totalProducts}</div>
-            </div>
+            {[
+              { title: "Total Users", value: totalUsers },
+              { title: "Total Sales (Recent)", value: `₦${Number(recentSalesTotal).toLocaleString()}` },
+              { title: "Low Stock", value: lowStockCount },
+              { title: "Total Products", value: totalProducts },
+            ].map((card, i) => (
+              <div key={i} className="bg-white p-4 rounded-2xl shadow hover:shadow-md transition">
+                <div className="text-xs text-slate-400">{card.title}</div>
+                <div className="mt-2 text-2xl font-semibold">{loading ? "..." : card.value}</div>
+              </div>
+            ))}
           </div>
 
-          {/* quick actions + recent sales */}
+          {/* Quick Actions + Sales */}
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick actions */}
             <aside className="lg:col-span-1 bg-white p-6 rounded-2xl shadow">
               <h3 className="text-lg font-semibold">Quick Actions</h3>
               <div className="mt-4 flex flex-col gap-3">
-                <button onClick={() => navigate("/products/new")} className="w-full py-3 rounded bg-indigo-600 text-white">➕ Add Product</button>
-                <button onClick={() => navigate("/products")} className="w-full py-3 rounded border">📦 View Products</button>
-                <button onClick={() => navigate("/users")} className="w-full py-3 rounded border">👥 Manage Users</button>
-                <button onClick={() => navigate("/sales")} className="w-full py-3 rounded border">🧾 View Sales</button>
-                <button onClick={() => navigate("/checkout")} className="w-full py-3 rounded bg-emerald-600 text-white">✅ Open Checkout</button>
+                <button onClick={() => go("/products/new")} className="w-full py-3 rounded bg-indigo-600 text-white">
+                  ➕ Add Product
+                </button>
+                <button onClick={() => go("/products")} className="w-full py-3 rounded border">
+                  📦 View Products
+                </button>
+                <button onClick={() => go("/users")} className="w-full py-3 rounded border">
+                  👥 Manage Users
+                </button>
+                <button onClick={() => go("/sales")} className="w-full py-3 rounded border">
+                  🧾 View Sales
+                </button>
+                <button onClick={() => go("/checkout")} className="w-full py-3 rounded bg-emerald-600 text-white">
+                  ✅ Open Checkout
+                </button>
               </div>
             </aside>
 
+            {/* Recent sales */}
             <section className="lg:col-span-2 bg-white p-4 rounded-2xl shadow overflow-x-auto">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold">Recent Sales</h3>
-                  <p className="text-sm text-slate-500">Latest transactions captured from the POS.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input className="px-3 py-2 border rounded" placeholder="Search..." />
-                  <button className="px-3 py-2 border rounded">Export</button>
+                  <p className="text-sm text-slate-500">Latest transactions from the POS system.</p>
                 </div>
               </div>
 
@@ -171,32 +216,51 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {!transactions || transactions.length === 0 ? (
-                    <tr><td colSpan="6" className="p-4 text-slate-500">No sales yet</td></tr>
-                  ) : transactions.map((tx, idx) => {
-                    const amount = Number(tx.totalAmount ?? tx.total ?? tx.amount ?? (tx.items ? tx.items.reduce((a, it) => a + (it.total ?? 0), 0) : 0));
-                    const qty = tx.quantity ?? (tx.items ? tx.items.reduce((a, it) => a + (it.qty ?? it.quantity ?? 0), 0) : "—");
-                    const pname = tx.productName ?? (tx.items && tx.items[0] ? tx.items[0].name : "Various");
-                    return (
-                      <tr key={tx.id} className="hover:bg-slate-50">
-                        <td className="p-2">{idx + 1}</td>
-                        <td className="p-2">
-                          <div className="font-medium">{pname}</div>
-                          <div className="text-xs text-slate-400">{tx.items ? `${tx.items.length} items` : tx.productCode ?? ""}</div>
-                        </td>
-                        <td className="p-2">{qty}</td>
-                        <td className="p-2">₦{Number(amount).toLocaleString()}</td>
-                        <td className="p-2">{tx.cashierEmail ?? tx.cashier ?? "—"}</td>
-                        <td className="p-2">{tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleString() : tx.timestamp ?? "—"}</td>
-                      </tr>
-                    );
-                  })}
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="p-4 text-slate-500">No sales yet</td>
+                    </tr>
+                  ) : (
+                    transactions.map((tx, i) => {
+                      const amt =
+                        tx.totalAmount ??
+                        tx.total ??
+                        tx.amount ??
+                        (tx.items ? tx.items.reduce((a, it) => a + (it.total ?? 0), 0) : 0);
+                      const qty =
+                        tx.quantity ??
+                        (tx.items ? tx.items.reduce((a, it) => a + (it.qty ?? it.quantity ?? 0), 0) : "—");
+                      const pname =
+                        tx.productName ?? (tx.items && tx.items[0] ? tx.items[0].name : "Various");
+                      return (
+                        <tr key={tx.id} className="hover:bg-slate-50">
+                          <td className="p-2">{i + 1}</td>
+                          <td className="p-2">
+                            <div className="font-medium">{pname}</div>
+                            <div className="text-xs text-slate-400">
+                              {tx.items ? `${tx.items.length} items` : ""}
+                            </div>
+                          </td>
+                          <td className="p-2">{qty}</td>
+                          <td className="p-2">₦{Number(amt).toLocaleString()}</td>
+                          <td className="p-2">{tx.cashierEmail ?? tx.cashier ?? "—"}</td>
+                          <td className="p-2">
+                            {tx.timestamp?.toDate
+                              ? tx.timestamp.toDate().toLocaleString()
+                              : tx.timestamp ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </section>
           </div>
 
-          <footer className="mt-8 text-center text-sm text-slate-500">© {new Date().getFullYear()} StockPro — Superior POS & Inventory</footer>
+          <footer className="mt-8 text-center text-sm text-slate-500">
+            © {new Date().getFullYear()} StockPro — Superior POS & Inventory
+          </footer>
         </main>
       </div>
     </div>
