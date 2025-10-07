@@ -221,13 +221,13 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold">Quick Actions</h3>
               <div className="mt-4 flex flex-col gap-3">
                 <button
-                  onClick={() => go("/products/new")}
+                  onClick={() => go("/stock-in")}
                   className="w-full py-3 rounded bg-indigo-600 text-white"
                 >
                   ➕ Add Product
                 </button>
                 <button
-                  onClick={() => go("/products")}
+                  onClick={() => go("/stock-in")}
                   className="w-full py-3 rounded border"
                 >
                   📦 View Products
