@@ -8,6 +8,8 @@ import { signOut } from "firebase/auth";
 import {
   collection,
   getDocs,
+  getDoc,       
+  setDoc,       
   query,
   orderBy,
   limit,
@@ -15,6 +17,7 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
+
 
 /**
  * AdminDashboard
@@ -160,7 +163,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* Sidebar for desktop */}
-      <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
+       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
         <Sidebar
           open={true}
           onNavigate={go}
@@ -168,7 +171,7 @@ export default function AdminDashboard() {
           active={activeTab}
           theme="dark"
         />
-      </div>
+      </div> 
 
       {/* Sidebar for mobile */}
       <Sidebar
