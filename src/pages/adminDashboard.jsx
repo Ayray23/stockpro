@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/sidebar";
-import Topbar from "../components/topbar";
+import Sidebar from "../component/sidebar";
+import Topbar from "../component/topbar";
 import { auth, db } from "../firebase";
 import { signOut } from "firebase/auth";
 import { collection, getDocs, query, orderBy, limit, where } from "firebase/firestore";
