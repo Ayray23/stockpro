@@ -1,127 +1,140 @@
-import React, { useState } from "react";
-import {
-  FaHome,
-  FaBoxOpen,
-  FaPlusSquare,
-  FaMinusSquare,
-  FaExchangeAlt,
-  FaUsers,
-  FaSignOutAlt,
-  FaBars,
-  FaTimes,
-} from "react-icons/fa";
-import { NavLink } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
+// src/components/Sidebar.jsx
+import React from "react";
 
+/**
+ * Sidebar - slide-in drawer, dark/light dual-tone, animated, icons inline
+ *
+ * Props:
+ *  - open (bool) : whether drawer is visible (mobile)
+ *  - onClose (fn) : close handler
+ *  - onNavigate (fn) : called with path string when nav item clicked
+ *  - user (object) : {email, role}
+ *  - theme ('dark'|'light') optional - only for styling hints
+ *
+ * Note: This component uses Tailwind transitions; it's lightweight.
+ */
 
+const NavItem = ({ icon, label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+      active ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white shadow-md" : "text-slate-200 hover:bg-white/6"
+    }`}
+  >
+    <span className="w-5 h-5 flex-none" aria-hidden dangerouslySetInnerHTML={{ __html: icon }} />
+    <span className="flex-1 text-left">{label}</span>
+  </button>
+);
 
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const navigate = useNavigate();
-
-const handleLogout = async () => {
-  try {
-    await signOut(auth);
-    navigate("/"); // Redirect to login
-    window.location.reload(); // Reload the page
-  } catch (err) {
-    console.error("Logout failed:", err);
-  }
-};
-
-
-  const baseClass =
-    "flex items-center px-4 py-3 text-sm font-medium transition-all";
-  const activeClass = "bg-blue-700 font-semibold border-l-4 border-white pl-3";
-  const inactiveClass = "text-white hover:bg-blue-700";
-  const linkClass = ({ isActive }) =>
-    `${baseClass} ${isActive ? activeClass : inactiveClass}`;
-
+export default function Sidebar({
+  open,
+  onClose = () => {},
+  onNavigate = (p) => {},
+  user = { email: "guest@local", role: "GUEST" },
+  active = "dashboard",
+  theme = "dark",
+}) {
+  // Colors adapt via classes; theme prop can be used if desired
   return (
     <>
-      {/* Mobile Navbar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-blue-800 text-white flex items-center justify-between p-4 z-40">
-        <h2 className="text-lg font-bold">StockPro</h2>
-        <button onClick={() => setIsOpen(true)}>
-          <FaBars size={24} />
-        </button>
-      </div>
-
-      {/* Mobile Sidebar (full screen when toggled) */}
+      {/* Backdrop */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-blue-800 text-white z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:hidden`}
+        onClick={onClose}
+        className={`fixed inset-0 z-30 transition-opacity ${
+          open ? "opacity-60 pointer-events-auto" : "opacity-0 pointer-events-none"
+        } bg-black/40`}
+        aria-hidden={!open}
+      />
+
+      {/* Sidebar drawer */}
+      <aside
+        className={`fixed top-0 left-0 z-40 h-full w-72 max-w-[85%] transform transition-transform duration-300 ease-in-out ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col bg-gradient-to-b ${
+          theme === "dark" ? "from-slate-900 to-slate-800" : "from-white to-slate-50"
+        } shadow-xl`}
+        aria-hidden={!open}
       >
-        <div className="flex justify-between items-center px-4 py-3 border-b border-blue-700">
-          <h2 className="text-xl font-bold">StockPro</h2>
-          <button onClick={() => setIsOpen(false)}>
-            <FaTimes size={22} />
-          </button>
-        </div>
-        <nav className="flex flex-col p-4 space-y-1">
-          <NavLink to="/dashboard" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaHome className="mr-3" /> Dashboard
-          </NavLink>
-          <NavLink to="/materials" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaBoxOpen className="mr-3" /> Materials
-          </NavLink>
-          <NavLink to="/stock-in" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaPlusSquare className="mr-3" /> Stock In
-          </NavLink>
-          <NavLink to="/stock-out" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaMinusSquare className="mr-3" /> Stock Out
-          </NavLink>
-          <NavLink to="/transactions" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaExchangeAlt className="mr-3" /> Transactions
-          </NavLink>
-          <NavLink to="/users" className={linkClass} onClick={() => setIsOpen(false)}>
-            <FaUsers className="mr-3" /> Users
-          </NavLink>
-          <button className="flex items-center px-4 py-3 mt-4 text-sm font-medium text-white transition-all hover:bg-red-600">
-            <FaSignOutAlt className="mr-3" /> Logout
-          </button>
-        </nav>
-      </div>
+        <div className="px-5 py-6 flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="rounded-lg p-2 bg-white/6">
+              {/* glyph */}
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" className="text-white">
+                <path d="M3 12h18M12 3v18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-white text-lg font-semibold leading-none">StockPro</div>
+              <div className="text-xs text-white/70">Supermarket POS</div>
+            </div>
+          </div>
 
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:flex-col md:w-64 md:h-screen md:fixed md:top-0 md:left-0 bg-blue-800 text-white shadow-lg z-10">
-        <div className="px-6 py-5 text-2xl font-bold border-b border-blue-700">
-          StockPro
-        </div>
-        <nav className="flex flex-col p-4 space-y-1">
-          <NavLink to="/dashboard" className={linkClass}>
-            <FaHome className="mr-3" /> Dashboard
-          </NavLink>
-          <NavLink to="/materials" className={linkClass}>
-            <FaBoxOpen className="mr-3" /> Materials
-          </NavLink>
-          <NavLink to="/stock-in" className={linkClass}>
-            <FaPlusSquare className="mr-3" /> Stock In
-          </NavLink>
-          <NavLink to="/stock-out" className={linkClass}>
-            <FaMinusSquare className="mr-3" /> Stock Out
-          </NavLink>
-          <NavLink to="/transactions" className={linkClass}>
-            <FaExchangeAlt className="mr-3" /> Transactions
-          </NavLink>
-          <NavLink to="/users" className={linkClass}>
-            <FaUsers className="mr-3" /> Users
-          </NavLink>
-          <button
-              onClick={handleLogout}
-              className="flex items-center px-4 py-3 mt-4 text-sm font-medium text-white transition-all hover:bg-red-600"
-            >
-              <FaSignOutAlt className="mr-3" /> Logout
-          </button>
+          {/* Nav */}
+          <nav className="flex-1 space-y-3">
+            <NavItem
+              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h18M12 3v18"/></svg>`}
+              label="Dashboard"
+              active={active === "dashboard"}
+              onClick={() => onNavigate("/admin")}
+            />
+            <NavItem
+              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`}
+              label="Products"
+              active={active === "products"}
+              onClick={() => onNavigate("/products")}
+            />
+            <NavItem
+              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M6 20v-1a4 4 0 014-4h4a4 4 0 014 4v1"/></svg>`}
+              label="Users"
+              active={active === "users"}
+              onClick={() => onNavigate("/users")}
+            />
+            <NavItem
+              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>`}
+              label="Sales"
+              active={active === "sales"}
+              onClick={() => onNavigate("/sales")}
+            />
+            <NavItem
+              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h18v4H3z"/><path d="M7 21h10v-7H7z"/></svg>`}
+              label="Checkout"
+              active={active === "checkout"}
+              onClick={() => onNavigate("/checkout")}
+            />
+          </nav>
 
-        </nav>
-      </div>
+          {/* bottom user area */}
+          <div className="mt-6 pt-4 border-t border-white/6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/8 flex items-center justify-center text-white text-sm font-medium">
+                {user.email ? user.email.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-white font-medium">{user.email ?? "Guest"}</div>
+                <div className="text-xs text-white/70">{user.role ?? "—"}</div>
+              </div>
+              <div>
+                <button
+                  onClick={() => onNavigate("/profile")}
+                  className="px-2 py-1 rounded-md text-xs bg-white/6 text-white hover:bg-white/10"
+                >
+                  Profile
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <button
+                onClick={() => onNavigate("/logout")}
+                className="w-full px-3 py-2 rounded-md bg-rose-500 text-white font-medium hover:opacity-95"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
     </>
   );
-};
-
-export default Sidebar;
+}
