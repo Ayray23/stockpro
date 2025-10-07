@@ -1,28 +1,48 @@
-// src/components/Sidebar.jsx
 import React from "react";
 
 /**
- * Sidebar - slide-in drawer, dark/light dual-tone, animated, icons inline
- *
- * Props:
- *  - open (bool) : whether drawer is visible (mobile)
- *  - onClose (fn) : close handler
- *  - onNavigate (fn) : called with path string when nav item clicked
- *  - user (object) : {email, role}
- *  - theme ('dark'|'light') optional - only for styling hints
- *
- * Note: This component uses Tailwind transitions; it's lightweight.
+ * Sidebar - animated drawer with active tab highlight
+ * - Smooth underline + gradient glow
+ * - Dark/light dual theme support
+ * - Super fast load (Tailwind-only)
  */
 
-const NavItem = ({ icon, label, active, onClick }) => (
+const NavItem = ({ icon, label, active, onClick, theme }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
-      active ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white shadow-md" : "text-slate-200 hover:bg-white/6"
-    }`}
+    className={`group relative w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-300
+      ${
+        active
+          ? theme === "dark"
+            ? "bg-gradient-to-r from-indigo-600 to-emerald-500 text-white shadow-md"
+            : "bg-indigo-100 text-indigo-700 shadow-sm"
+          : theme === "dark"
+          ? "text-slate-300 hover:text-white hover:bg-white/10"
+          : "text-slate-600 hover:text-slate-900 hover:bg-indigo-50"
+      }`}
   >
-    <span className="w-5 h-5 flex-none" aria-hidden dangerouslySetInnerHTML={{ __html: icon }} />
-    <span className="flex-1 text-left">{label}</span>
+    {/* Icon */}
+    <span
+      className={`w-5 h-5 flex-none transition-transform duration-300 ${
+        active ? "scale-110" : "group-hover:scale-105"
+      }`}
+      aria-hidden
+      dangerouslySetInnerHTML={{ __html: icon }}
+    />
+
+    {/* Label */}
+    <span className="flex-1 text-left font-medium">{label}</span>
+
+    {/* Underline animation */}
+    {active && (
+      <span
+        className={`absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-500 ${
+          theme === "dark"
+            ? "bg-gradient-to-r from-indigo-400 to-emerald-400 shadow-[0_0_6px_rgba(99,102,241,0.8)]"
+            : "bg-gradient-to-r from-indigo-500 to-emerald-500"
+        }`}
+      />
+    )}
   </button>
 );
 
@@ -34,7 +54,6 @@ export default function Sidebar({
   active = "dashboard",
   theme = "dark",
 }) {
-  // Colors adapt via classes; theme prop can be used if desired
   return (
     <>
       {/* Backdrop */}
@@ -50,84 +69,146 @@ export default function Sidebar({
       <aside
         className={`fixed top-0 left-0 z-40 h-full w-72 max-w-[85%] transform transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
-        } flex flex-col bg-gradient-to-b ${
-          theme === "dark" ? "from-slate-900 to-slate-800" : "from-white to-slate-50"
+        } flex flex-col ${
+          theme === "dark"
+            ? "bg-gradient-to-b from-slate-900 to-slate-800 text-white"
+            : "bg-gradient-to-b from-white to-slate-50 text-slate-900"
         } shadow-xl`}
         aria-hidden={!open}
       >
         <div className="px-5 py-6 flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo Section */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-lg p-2 bg-white/6">
-              {/* glyph */}
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" className="text-white">
-                <path d="M3 12h18M12 3v18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <div
+              className={`rounded-lg p-2 ${
+                theme === "dark" ? "bg-white/10" : "bg-indigo-100"
+              }`}
+            >
+              <svg
+                width="26"
+                height="26"
+                viewBox="0 0 24 24"
+                fill="none"
+                className={theme === "dark" ? "text-white" : "text-indigo-600"}
+              >
+                <path
+                  d="M3 12h18M12 3v18"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <div>
-              <div className="text-white text-lg font-semibold leading-none">StockPro</div>
-              <div className="text-xs text-white/70">Supermarket POS</div>
+              <div
+                className={`text-lg font-semibold leading-none ${
+                  theme === "dark" ? "text-white" : "text-slate-900"
+                }`}
+              >
+                StockPro
+              </div>
+              <div
+                className={`text-xs ${
+                  theme === "dark" ? "text-white/70" : "text-slate-500"
+                }`}
+              >
+                Supermarket POS
+              </div>
             </div>
           </div>
 
-          {/* Nav */}
+          {/* Navigation */}
           <nav className="flex-1 space-y-3">
             <NavItem
-              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h18M12 3v18"/></svg>`}
+              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 12h18M12 3v18'/></svg>`}
               label="Dashboard"
               active={active === "dashboard"}
               onClick={() => onNavigate("/admin")}
+              theme={theme}
             />
             <NavItem
-              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`}
+              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/></svg>`}
               label="Products"
               active={active === "products"}
               onClick={() => onNavigate("/products")}
+              theme={theme}
             />
             <NavItem
-              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M6 20v-1a4 4 0 014-4h4a4 4 0 014 4v1"/></svg>`}
+              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M12 12a4 4 0 100-8 4 4 0 000 8z'/><path d='M6 20v-1a4 4 0 014-4h4a4 4 0 014 4v1'/></svg>`}
               label="Users"
               active={active === "users"}
               onClick={() => onNavigate("/users")}
+              theme={theme}
             />
             <NavItem
-              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>`}
+              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 6h18'/><path d='M3 12h18'/><path d='M3 18h18'/></svg>`}
               label="Sales"
               active={active === "sales"}
               onClick={() => onNavigate("/sales")}
+              theme={theme}
             />
             <NavItem
-              icon={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h18v4H3z"/><path d="M7 21h10v-7H7z"/></svg>`}
+              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 3h18v4H3z'/><path d='M7 21h10v-7H7z'/></svg>`}
               label="Checkout"
               active={active === "checkout"}
               onClick={() => onNavigate("/checkout")}
+              theme={theme}
             />
           </nav>
 
-          {/* bottom user area */}
-          <div className="mt-6 pt-4 border-t border-white/6">
+          {/* User Info + Logout */}
+          <div
+            className={`mt-6 pt-4 border-t ${
+              theme === "dark" ? "border-white/10" : "border-slate-200"
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/8 flex items-center justify-center text-white text-sm font-medium">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+                  theme === "dark"
+                    ? "bg-white/10 text-white"
+                    : "bg-indigo-100 text-indigo-700"
+                }`}
+              >
                 {user.email ? user.email.charAt(0).toUpperCase() : "U"}
               </div>
               <div className="flex-1">
-                <div className="text-sm text-white font-medium">{user.email ?? "Guest"}</div>
-                <div className="text-xs text-white/70">{user.role ?? "—"}</div>
-              </div>
-              <div>
-                <button
-                  onClick={() => onNavigate("/profile")}
-                  className="px-2 py-1 rounded-md text-xs bg-white/6 text-white hover:bg-white/10"
+                <div
+                  className={`text-sm font-medium ${
+                    theme === "dark" ? "text-white" : "text-slate-900"
+                  }`}
                 >
-                  Profile
-                </button>
+                  {user.email ?? "Guest"}
+                </div>
+                <div
+                  className={`text-xs ${
+                    theme === "dark" ? "text-white/70" : "text-slate-500"
+                  }`}
+                >
+                  {user.role ?? "—"}
+                </div>
               </div>
+              <button
+                onClick={() => onNavigate("/profile")}
+                className={`px-2 py-1 rounded-md text-xs ${
+                  theme === "dark"
+                    ? "bg-white/10 text-white hover:bg-white/20"
+                    : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                }`}
+              >
+                Profile
+              </button>
             </div>
 
             <div className="mt-3">
               <button
                 onClick={() => onNavigate("/logout")}
-                className="w-full px-3 py-2 rounded-md bg-rose-500 text-white font-medium hover:opacity-95"
+                className={`w-full px-3 py-2 rounded-md font-medium transition ${
+                  theme === "dark"
+                    ? "bg-rose-500 text-white hover:bg-rose-400"
+                    : "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                }`}
               >
                 Logout
               </button>
