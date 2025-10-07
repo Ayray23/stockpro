@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -17,19 +16,38 @@ const LoginPage = () => {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
+      const user = userCredential.user;
+      const uid = user.uid;
 
-      // Get role from Firestore
-      const userDoc = await getDoc(doc(db, "users", uid));
-      const role = userDoc.data()?.role;
+      // 🔥 Fetch user record
+      const userRef = doc(db, "users", uid);
+      const snap = await getDoc(userRef);
 
-      if (role === "admin") {
-        navigate("/adminDashboard");
-      } else {
-        navigate("/salesDashboard");
+      if (!snap.exists()) {
+        // 🧠 First user becomes admin
+        const allUsers = await getDocs(collection(db, "users"));
+        const isFirstUser = allUsers.empty;
+        const role = isFirstUser ? "admin" : "staff";
+
+        await setDoc(userRef, {
+          uid,
+          email: user.email,
+          role,
+          createdAt: new Date().toISOString(),
+        });
+
+        console.log(✅ Created new ${role} user);
+        if (role === "admin") navigate("/adminDashboard");
+        else navigate("/salesDashboard");
+        return;
       }
 
+      // ✅ If already exists, route by role
+      const data = snap.data();
+      if (data.role === "admin") navigate("/adminDashboard");
+      else navigate("/salesDashboard");
     } catch (err) {
+      console.error("Login error:", err);
       setError("Login failed: " + err.message);
     }
   };
@@ -79,7 +97,7 @@ const LoginPage = () => {
         </form>
 
         <p className="text-sm text-center text-gray-600">
-          Don't have an account?{" "}
+          Don’t have an account?{" "}
           <Link to="/signup" className="text-blue-600 hover:underline font-medium">
             Sign Up
           </Link>
@@ -90,3 +108,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
