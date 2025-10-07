@@ -56,23 +56,26 @@ export default function AdminDashboard() {
 
       setCurrentUser(u);
       try {
-        const q = query(collection(db, "users"), where("uid", "==", u.uid));
-        const snap = await getDocs(q);
-        const docData = snap.docs[0];
-        const userData = docData
-          ? { id: docData.id, ...docData.data() }
-          : { email: u.email, role: "staff" };
+      const userRef = doc(db, "users", u.uid);
+      const snap = await getDoc(userRef);
 
-        console.log("DEBUG user fetch:", snap.docs.map((d) => d.data()));
-        setProfile(userData);
-
-        // Only admins can stay here
-        if (userData.role !== "admin") navigate("/checkout");
-      } catch (err) {
-        console.error("Profile fetch error:", err);
-        navigate("/checkout");
+      if (!snap.exists()) {
+        // 👇 auto-create user record if missing
+        await setDoc(userRef, {
+          uid: u.uid,
+          email: u.email,
+          role: "staff", // default role
+          createdAt: new Date().toISOString(),
+        });
       }
-    });
+
+      const userData = snap.exists() ? snap.data() : { email: u.email, role: "staff" };
+      setProfile(userData);
+
+      if (userData.role !== "admin") navigate("/salesDashboard");
+      } catch (error) { console.error("Error fetching user profile:", error); 
+    }
+  });
     return () => unsub();
   }, [navigate]);
 
@@ -143,16 +146,16 @@ export default function AdminDashboard() {
     }
   }
 
-  // if (!profile || profile.role !== "admin") {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen bg-slate-100">
-  //       <div className="text-center">
-  //         <h2 className="text-xl font-semibold text-slate-700">Checking access...</h2>
-  //         <p className="text-slate-500 mt-2">Please wait while we verify your admin role.</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (!profile || profile.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-slate-700">Checking access...</h2>
+          <p className="text-slate-500 mt-2">Please wait while we verify your admin role.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -385,4 +388,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+} 

@@ -24,7 +24,7 @@ const LoginPage = () => {
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {
-        // 🧠 First user becomes admin
+        //  First user becomes admin
         const allUsers = await getDocs(collection(db, "users"));
         const isFirstUser = allUsers.empty;
         const role = isFirstUser ? "admin" : "staff";
@@ -36,7 +36,7 @@ const LoginPage = () => {
           createdAt: new Date().toISOString(),
         });
 
-        console.log(✅ Created new ${role} user);
+        console.log(`Created new ${role} user`);
         if (role === "admin") navigate("/adminDashboard");
         else navigate("/salesDashboard");
         return;
