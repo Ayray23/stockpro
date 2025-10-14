@@ -1,8 +1,5 @@
 // src/pages/StockOut.jsx
-//total product list with search and filter tools 
-//New page or a modal for a checkout and print recipt function 
-//calculate total when the qty of goods is added
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -12,119 +9,217 @@ import {
   serverTimestamp,
   getDoc,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import { toast } from "react-toastify";
+import Sidebar from "../component/sidebar";
+import Topbar from "../component/topbar";
+import { useNavigate } from "react-router-dom";
 
-const StockOut = () => {
+export default function StockOut() {
   const [materials, setMaterials] = useState([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [receipt, setReceipt] = useState(null);
+  const receiptRef = useRef();
+  const navigate = useNavigate();
 
-  // Fetch materials
+  // ✅ Auth check
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((u) => {
+      if (!u) return navigate("/login");
+      setUser(u);
+    });
+    return () => unsub();
+  }, [navigate]);
+
+  // ✅ Fetch all materials
   useEffect(() => {
     const fetchMaterials = async () => {
-      const snapshot = await getDocs(collection(db, "materials"));
-      const items = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setMaterials(items);
+      const snap = await getDocs(collection(db, "materials"));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setMaterials(list);
     };
-
     fetchMaterials();
   }, []);
 
+  // ✅ Submit checkout
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!selectedId || !quantity) {
-      return toast.error("Please select material and enter quantity");
-    }
-
-    const materialRef = doc(db, "materials", selectedId);
-    const materialSnap = await getDoc(materialRef);
-
-    if (!materialSnap.exists()) {
-      return toast.error("Material not found!");
-    }
-
-    const currentData = materialSnap.data();
-    const currentQty = currentData.quantity;
-
-    if (Number(quantity) > currentQty) {
-      return toast.error("Not enough stock");
-    }
+    if (!selected || !quantity) return toast.error("Please select product and quantity");
 
     try {
-      // 1. Update quantity
-      await updateDoc(materialRef, {
-        quantity: currentQty - Number(quantity),
-      });
+      const ref = doc(db, "materials", selected.id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return toast.error("Product not found");
 
-      // 2. Log transaction
-      await addDoc(collection(db, "transactions"), {
+      const data = snap.data();
+      const currentQty = data.quantity ?? 0;
+      if (Number(quantity) > currentQty) return toast.error("Insufficient stock");
+
+      const remaining = currentQty - Number(quantity);
+      await updateDoc(ref, { quantity: remaining });
+
+      const sale = {
         type: "Stock Out",
-        materialId: selectedId,
-        materialName: currentData.name,
+        materialId: selected.id,
+        materialName: data.name,
         quantity: Number(quantity),
-        unit: currentData.unit,
+        unit: data.unit,
         note,
+        cashierEmail: user?.email,
         timestamp: serverTimestamp(),
-      });
+      };
+      const txRef = await addDoc(collection(db, "transactions"), sale);
 
-      toast.success("✅ Stock updated!");
-      setSelectedId("");
+      toast.success("✅ Checkout completed!");
+      setReceipt({ id: txRef.id, ...sale, total: data.price ? data.price * quantity : quantity });
       setQuantity("");
       setNote("");
+      setSelected(null);
     } catch (err) {
       console.error(err);
-      toast.error("❌ Failed to stock out");
+      toast.error("Failed to complete checkout");
     }
   };
 
+  // ✅ Print receipt
+  const handlePrint = () => {
+    const content = receiptRef.current.innerHTML;
+    const w = window.open("", "PrintWindow", "width=400,height=600");
+    w.document.write(`<html><head><title>Receipt</title>
+      <style>
+        body{font-family:sans-serif;padding:16px;}
+        h2{text-align:center;margin-bottom:10px;}
+        table{width:100%;border-collapse:collapse;margin-top:10px;}
+        td,th{padding:4px;border-bottom:1px solid #ccc;}
+        .total{font-weight:bold;text-align:right;margin-top:10px;}
+        .footer{text-align:center;margin-top:20px;font-size:12px;color:#666;}
+      </style>
+      </head><body>${content}</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-md pt-16 md:ml-64  space-y-4 bg-white p-4 rounded shadow">
-      <h2 className="text-xl font-semibold text-center">Stock Out</h2>
-
-      <select
-        value={selectedId}
-        onChange={(e) => setSelectedId(e.target.value)}
-        className="w-full border px-3 py-2 rounded"
-        required
-      >
-        <option value="">Select Material</option>
-        {materials.map((mat) => (
-          <option key={mat.id} value={mat.id}>
-            {mat.name} ({mat.quantity} {mat.unit})
-          </option>
-        ))}
-      </select>
-
-      <input
-        type="number"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        placeholder="Quantity to remove"
-        className="w-full border px-3 py-2 rounded"
-        required
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={(path) => {
+          setSidebarOpen(false);
+          navigate(path);
+        }}
+        user={{ email: user?.email, role: "staff" }}
+        active="checkout"
+        theme="light"
       />
 
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Purpose / Notes (optional)"
-        className="w-full border px-3 py-2 rounded"
-      />
+      <div className="md:pl-72">
+        <Topbar title="Checkout / Stock Out" onToggleSidebar={() => setSidebarOpen(true)} />
 
-      <button
-        type="submit"
-        className="bg-red-600 text-white w-full py-2 rounded hover:bg-red-700"
-      >
-        ➖ Stock Out
-      </button>
-    </form>
+        <main className="max-w-3xl mx-auto py-12 px-6">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-center mb-6">🧾 Checkout Material</h2>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium mb-1">Select Material</label>
+                <select
+                  value={selected?.id || ""}
+                  onChange={(e) => {
+                    const item = materials.find((m) => m.id === e.target.value);
+                    setSelected(item || null);
+                  }}
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">-- Choose Material --</option>
+                  {materials.map((mat) => (
+                    <option key={mat.id} value={mat.id}>
+                      {mat.name} ({mat.quantity} {mat.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="Enter quantity"
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Purpose / Notes</label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Optional note"
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition"
+              >
+                ✅ Complete Checkout
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+
+      {/* ✅ Receipt Modal */}
+      {receipt && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-[400px] max-w-full p-6 animate-fadeIn">
+            <div ref={receiptRef}>
+              <h2>🧾 StockPro Receipt</h2>
+              <p><strong>ID:</strong> {receipt.id}</p>
+              <p><strong>Cashier:</strong> {receipt.cashierEmail}</p>
+              <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
+              <table>
+                <tbody>
+                  <tr>
+                    <td>{receipt.materialName}</td>
+                    <td>{receipt.quantity} {receipt.unit}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="total">Total: {receipt.total}</div>
+              {receipt.note && <p><em>Note:</em> {receipt.note}</p>}
+              <div className="footer">Thank you for your purchase!</div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handlePrint}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                🖨 Print
+              </button>
+              <button
+                onClick={() => setReceipt(null)}
+                className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
-};
-
-export default StockOut;
+}
