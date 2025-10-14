@@ -120,42 +120,87 @@ export default function Sidebar({
 
           {/* Navigation */}
           <nav className="flex-1 space-y-3">
-            <NavItem
-              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 12h18M12 3v18'/></svg>`}
-              label="Dashboard"
-              active={active === "dashboard"}
-              onClick={() => onNavigate("/adminDashboard")}
-              theme={theme}
-            />
-            <NavItem
-              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/></svg>`}
-              label="Products"
-              active={active === "products"}
-              onClick={() => onNavigate("/materialsPage")}
-              theme={theme}
-            />
-            <NavItem
-              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M12 12a4 4 0 100-8 4 4 0 000 8z'/><path d='M6 20v-1a4 4 0 014-4h4a4 4 0 014 4v1'/></svg>`}
-              label="Users"
-              active={active === "users"}
-              onClick={() => onNavigate("/users")}
-              theme={theme}
-            />
-            <NavItem
-              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 6h18'/><path d='M3 12h18'/><path d='M3 18h18'/></svg>`}
-              label="Sales"
-              active={active === "sales"}
-              onClick={() => onNavigate("/sales")}
-              theme={theme}
-            />
-            <NavItem
-              icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 3h18v4H3z'/><path d='M7 21h10v-7H7z'/></svg>`}
-              label="Checkout"
-              active={active === "checkout"}
-              onClick={() => onNavigate("/stockOutpage")}
-              theme={theme}
-            />
-          </nav>
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M3 12h18M12 3v18'/></svg>}
+            label="Dashboard"
+            active={active === "dashboard"}
+            onClick={() => onNavigate("/dashboard")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/></svg>}
+            label="Admin Dashboard"
+            active={active === "adminDashboard"}
+            onClick={() => onNavigate("/adminDashboard")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M12 12a4 4 0 100-8 4 4 0 000 8z'/><path d='M6 20v-1a4 4 0 014-4h4a4 4 0 014 4v1'/></svg>}
+            label="Sales Dashboard"
+            active={active === "salesDashboard"}
+            onClick={() => onNavigate("/salesDashboard")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M3 3h18v4H3z'/><path d='M7 21h10v-7H7z'/></svg>}
+            label="Materials"
+            active={active === "materials"}
+            onClick={() => onNavigate("/materials")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M4 6h16M4 12h16M4 18h16'/></svg>}
+            label="Stock In"
+            active={active === "stockIn"}
+            onClick={() => onNavigate("/stock-in")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M3 3h18v4H3z'/><path d='M7 21h10v-7H7z'/></svg>}
+            label="Stock Out"
+            active={active === "stockOut"}
+            onClick={() => onNavigate("/stock-out")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M4 4h16v16H4z'/></svg>}
+            label="Stock Table"
+            active={active === "stockTable"}
+            onClick={() => onNavigate("/stock-table")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M12 20v-6M6 20v-4M18 20v-8'/></svg>}
+            label="Transactions"
+            active={active === "transactions"}
+            onClick={() => onNavigate("/transactions")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><circle cx='12' cy='12' r='10'/><path d='M8 12h8'/></svg>}
+            label="Summary"
+            active={active === "summary"}
+            onClick={() => onNavigate("/summary")}
+            theme={theme}
+          />
+
+          <NavItem
+            //icon={<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'><path d='M12 12a5 5 0 100-10 5 5 0 000 10z'/><path d='M4 20v-1a7 7 0 0114 0v1'/></svg>}
+            label="Users"
+            active={active === "users"}
+            onClick={() => onNavigate("/users")}
+            theme={theme}
+          />
+        </nav>
+
 
           {/* User Info + Logout */}
           <div
