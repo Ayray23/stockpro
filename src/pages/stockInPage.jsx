@@ -1,6 +1,6 @@
 // src/pages/AddProduct.jsx
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../component/sidebar";
@@ -21,24 +21,42 @@ export default function AddProduct() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ Only admin can access
+  //  Firestore role check (matches your AdminDashboard)
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       if (!u) {
         navigate("/login");
         return;
       }
-      const token = await u.getIdTokenResult();
-      const claims = token.claims || {};
-      if (!claims.admin && u.email !== "admin@stockpro.com") {
-        toast.error("🚫 Unauthorized access");
-        navigate("/checkout");
-      } else {
+
+      try {
+        const userRef = doc(db, "users", u.uid);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          toast.error("No profile found for this account");
+          navigate("/checkout");
+          return;
+        }
+
+        const data = snap.data();
+        if (data.role !== "admin") {
+          toast.error("Unauthorized access");
+          navigate("/checkout");
+          return;
+        }
+
         setProfile({ email: u.email, role: "admin" });
+      } catch (err) {
+        console.error("Error verifying admin role:", err);
+        toast.error(" Unable to verify role");
+        navigate("/checkout");
       }
     });
+
     return () => unsub();
   }, [navigate]);
+
 
   const handleChange = (e) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
