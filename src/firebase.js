@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
+
 // ✅ Your Firebase project configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDbhgKiGx0HT044Dcq49-FSHMul97zhRM4",
