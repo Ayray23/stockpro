@@ -124,14 +124,14 @@ export default function Sidebar({
               icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 12h18M12 3v18'/></svg>`}
               label="Dashboard"
               active={active === "dashboard"}
-              onClick={() => onNavigate("/admin")}
+              onClick={() => onNavigate("/adminDashboard")}
               theme={theme}
             />
             <NavItem
               icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/></svg>`}
               label="Products"
               active={active === "products"}
-              onClick={() => onNavigate("/products")}
+              onClick={() => onNavigate("/materialsPage")}
               theme={theme}
             />
             <NavItem
@@ -152,7 +152,7 @@ export default function Sidebar({
               icon={`<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M3 3h18v4H3z'/><path d='M7 21h10v-7H7z'/></svg>`}
               label="Checkout"
               active={active === "checkout"}
-              onClick={() => onNavigate("/checkout")}
+              onClick={() => onNavigate("/stockOutpage")}
               theme={theme}
             />
           </nav>
