@@ -27,7 +27,7 @@ export default function Topbar({ title = "Dashboard", onToggleSidebar = () => {}
               </svg>
             </button>
 
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+            <h2 className="text-lg font-semibold text-slate-300 dark:text-white">{title}</h2>
             <div className="hidden sm:block text-sm text-slate-500">• Admin panel</div>
           </div>
 
