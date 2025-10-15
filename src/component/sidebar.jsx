@@ -47,11 +47,10 @@ export default function Sidebar({
   // ✅ Menu per role
   const adminMenu = [
     { label: "Dashboard", path: "/adminDashboard" },
-    { label: "Add Product", path: "/add-product" },
+    { label: "Add Product", path: "/addProduct" },
     { label: "Materials", path: "/materials" },
-    { label: "Stock In", path: "/stock-in" },
-    { label: "Stock Out", path: "/stock-out" },
-    { label: "Transactions", path: "/transactions" },
+    { label: "Stock Out", path: "/stockOut" },
+    { label: "Transactions", path: "/transactionsTable" },
     { label: "Summary", path: "/summary" },
     { label: "Users", path: "/users" },
   ];

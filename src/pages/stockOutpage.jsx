@@ -1,3 +1,4 @@
+// src/pages/stockOut.jsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   collection,
@@ -15,11 +16,11 @@ import Topbar from "../component/topbar";
 import { useNavigate } from "react-router-dom";
 
 /**
- * stockOut.jsx
- * Checkout / POS Page
- * - Only accessible by logged-in staff
- * - Updates product stock & creates transaction record
- * - Generates a print-ready receipt
+ * StockOut.jsx (Checkout Page)
+ * - Securely fetches logged-in user + role
+ * - Prevents overwriting roles (admin stays admin)
+ * - Updates inventory + logs transaction
+ * - Prints receipt
  */
 
 export default function StockOut() {
@@ -29,16 +30,35 @@ export default function StockOut() {
   const [note, setNote] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [receipt, setReceipt] = useState(null);
   const receiptRef = useRef();
   const navigate = useNavigate();
 
-  // ✅ Auth listener
+  // ✅ Auth + Profile Fetch
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => {
-      if (!u) navigate("/auth");
-      else setUser(u);
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      if (!u) return navigate("/auth");
+
+      setUser(u);
+
+      try {
+        const userRef = doc(db, "users", u.uid);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          toast.error("User profile not found. Please contact admin.");
+          navigate("/auth");
+          return;
+        }
+
+        setProfile(snap.data());
+      } catch (err) {
+        console.error("Profile fetch error:", err);
+        toast.error("Failed to verify user role.");
+      }
     });
+
     return () => unsub();
   }, [navigate]);
 
@@ -113,6 +133,15 @@ export default function StockOut() {
     w.print();
   };
 
+  // ✅ Loading guard
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-100 text-slate-600">
+        Verifying account...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex">
       {/* Sidebar (Desktop) */}
@@ -120,7 +149,7 @@ export default function StockOut() {
         <Sidebar
           open={true}
           onNavigate={(p) => navigate(p)}
-          user={{ email: user?.email, role: "staff" }}
+          user={{ email: user?.email, role: profile?.role }}
           active="stockOut"
           theme="dark"
         />
@@ -134,7 +163,7 @@ export default function StockOut() {
           setSidebarOpen(false);
           navigate(p);
         }}
-        user={{ email: user?.email, role: "staff" }}
+        user={{ email: user?.email, role: profile?.role }}
         active="stockOut"
         theme="dark"
       />
@@ -144,6 +173,7 @@ export default function StockOut() {
         <Topbar
           title={`Checkout • ${user?.email?.split("@")[0] || "Staff"}`}
           onToggleSidebar={() => setSidebarOpen(true)}
+          user={profile}
         />
 
         <main className="max-w-3xl mx-auto py-12 px-6">
@@ -153,7 +183,6 @@ export default function StockOut() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Product Select */}
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Select Product
@@ -177,7 +206,6 @@ export default function StockOut() {
                 </select>
               </div>
 
-              {/* Quantity */}
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Quantity
@@ -192,7 +220,6 @@ export default function StockOut() {
                 />
               </div>
 
-              {/* Note */}
               <div>
                 <label className="block text-sm font-medium text-slate-600 mb-1">
                   Notes / Purpose (optional)
@@ -206,7 +233,6 @@ export default function StockOut() {
                 />
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition"
