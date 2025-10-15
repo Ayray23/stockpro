@@ -1,57 +1,44 @@
-// src/App.jsx
+// src/app.jsx
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-import LoginPage from "./pages/authPage";
-import SignUpPage from "./pages/signup";
-import Dashboard from "./component/dashboard";
-import PrivateRoute from "./component/privateroute";
+import AuthPage from "./pages/uthPage";
 import AdminDashboard from "./pages/adminDashboard";
 import SalesDashboard from "./pages/salesDashboard";
 import MaterialsPage from "./pages/materialsPage";
-import StockInPage from "./pages/addProduct";
+import AddProduct from "./pages/addProduct";
 import StockOutPage from "./pages/stockOutpage";
 import StockTable from "./pages/stockTable";
 import TransactionsTable from "./pages/transactionsTable";
 import SummaryCards from "./pages/summaryCards";
-import UserPage from "./pages/userpage";
-import Layout from "./component/layout";
-import SplashScreen from "./component/splashscreen";
+import UserPage from "./pages/userPage";
 
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import Layout from "./component/layout";
+import PrivateRoute from "./component/privateroute";
+import SplashScreen from "./component/splashscreen";
 
 const App = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const splashTimer = setTimeout(() => {
-      setLoading(false);
-    }, 4000); // Show splash for 3 seconds
-
+    const splashTimer = setTimeout(() => setLoading(false), 2500);
     return () => clearTimeout(splashTimer);
   }, []);
 
-  if (loading) {
-    return <SplashScreen />;
-  }
+  if (loading) return <SplashScreen />;
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+
       <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </PrivateRoute>
-          }
-        />
+        {/* Public Routes */}
+        <Route path="/" element={<Navigate to="/auth" />} />
+        <Route path="/auth" element={<AuthPage />} />
+
+        {/* Protected Routes */}
         <Route
           path="/adminDashboard"
           element={
@@ -83,17 +70,17 @@ const App = () => {
           }
         />
         <Route
-          path="/stock-in"
+          path="/addProduct"
           element={
             <PrivateRoute>
               <Layout>
-                <StockInPage />
+                <AddProduct />
               </Layout>
             </PrivateRoute>
           }
         />
         <Route
-          path="/stock-out"
+          path="/stockOut"
           element={
             <PrivateRoute>
               <Layout>
@@ -103,7 +90,7 @@ const App = () => {
           }
         />
         <Route
-          path="/stock-table"
+          path="/stockTable"
           element={
             <PrivateRoute>
               <Layout>
@@ -140,6 +127,17 @@ const App = () => {
                 <UserPage />
               </Layout>
             </PrivateRoute>
+          }
+        />
+
+        {/* 404 Fallback */}
+        <Route
+          path="*"
+          element={
+            <div className="flex flex-col items-center justify-center min-h-screen text-gray-500">
+              <h2 className="text-xl font-semibold mb-2">404 - Page Not Found</h2>
+              <p>Sorry, this route does not exist.</p>
+            </div>
           }
         />
       </Routes>

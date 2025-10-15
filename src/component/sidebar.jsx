@@ -67,13 +67,13 @@ export default function Sidebar({
   return (
     <>
       {/* Backdrop for mobile */}
-      <div
+      {/* <div
         onClick={onClose}
         className={`fixed inset-0 z-30 bg-black/40 transition-opacity ${
           open ? "opacity-60 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden={!open}
-      />
+      /> */}
 
       {/* Sidebar Drawer */}
       <aside
