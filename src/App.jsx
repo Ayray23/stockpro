@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import LoginPage from "./pages/login";
+import LoginPage from "./pages/authpage";
 import SignUpPage from "./pages/signup";
 import Dashboard from "./component/dashboard";
 import PrivateRoute from "./component/privateroute";
