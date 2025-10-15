@@ -13,7 +13,30 @@ const UsersPage = () => {
   }, []);
 
   return (
-    <div className="pt-16 md:ml-64 p-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+      {/* Sidebar (Desktop) */}
+      <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
+        <Sidebar
+          open={true}
+          onNavigate={(p) => navigate(p)}
+          user={{ email: user?.email, role: profile?.role }}
+          active="stockOut"
+          theme="dark"
+        />
+      </div>
+
+      {/* Sidebar (Mobile) */}
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={(p) => {
+          setSidebarOpen(false);
+          navigate(p);
+        }}
+        user={{ email: user?.email, role: profile?.role }}
+        active="stockOut"
+        theme="dark"
+      />
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Users Management</h1>
       <p className="text-gray-600">List of users who can access the system (admins, staff, etc.)</p>
 
