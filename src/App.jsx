@@ -9,7 +9,7 @@ import PrivateRoute from "./component/privateroute";
 import AdminDashboard from "./pages/adminDashboard";
 import SalesDashboard from "./pages/salesDashboard";
 import MaterialsPage from "./pages/materialsPage";
-import StockInPage from "./pages/stockInPage";
+import StockInPage from "./pages/addProduct";
 import StockOutPage from "./pages/stockOutpage";
 import StockTable from "./pages/stockTable";
 import TransactionsTable from "./pages/transactionsTable";

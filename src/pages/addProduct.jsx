@@ -1,4 +1,3 @@
-// src/pages/AddProduct.jsx
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -8,6 +7,12 @@ import Topbar from "../component/topbar";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+/**
+ * addProduct.jsx
+ * Admin-only page to add new products to the database
+ * Includes live role check, clean UI, and form validation
+ */
+
 export default function AddProduct() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -16,16 +21,17 @@ export default function AddProduct() {
     category: "",
     price: "",
     quantity: "",
+    unit: "",
     barcode: "",
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  //  Firestore role check (matches your AdminDashboard)
+  // ✅ Verify admin role before showing page
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       if (!u) {
-        navigate("/login");
+        navigate("/auth");
         return;
       }
 
@@ -34,55 +40,57 @@ export default function AddProduct() {
         const snap = await getDoc(userRef);
 
         if (!snap.exists()) {
-          toast.error("No profile found for this account");
-          navigate("/checkout");
+          toast.error("⚠️ User profile not found.");
+          navigate("/salesDashboard");
           return;
         }
 
         const data = snap.data();
         if (data.role !== "admin") {
-          toast.error("Unauthorized access");
-          navigate("/checkout");
+          toast.error("❌ Unauthorized access");
+          navigate("/salesDashboard");
           return;
         }
 
         setProfile({ email: u.email, role: "admin" });
       } catch (err) {
         console.error("Error verifying admin role:", err);
-        toast.error(" Unable to verify role");
-        navigate("/checkout");
+        toast.error("Error verifying access");
+        navigate("/salesDashboard");
       }
     });
 
     return () => unsub();
   }, [navigate]);
 
+  // ✅ Handle input
+  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleChange = (e) =>
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-
+  // ✅ Submit new product
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { name, category, price, quantity, barcode } = form;
-    if (!name || !category || !price || !quantity) {
+    const { name, category, price, quantity, unit } = form;
+
+    if (!name || !category || !price || !quantity || !unit) {
       toast.warning("⚠️ Fill all required fields!");
       return;
     }
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "products"), {
+      await addDoc(collection(db, "materials"), {
         name,
         category,
         price: Number(price),
         quantity: Number(quantity),
-        barcode: barcode || "",
+        unit,
+        barcode: form.barcode || "",
         is_sold: false,
         createdAt: serverTimestamp(),
       });
 
       toast.success("✅ Product added successfully!");
-      setForm({ name: "", category: "", price: "", quantity: "", barcode: "" });
+      setForm({ name: "", category: "", price: "", quantity: "", unit: "", barcode: "" });
     } catch (err) {
       console.error("Add product error:", err);
       toast.error("❌ Failed to add product.");
@@ -91,50 +99,53 @@ export default function AddProduct() {
     }
   };
 
+  // If not yet verified
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-100">
-        <div className="text-center text-slate-600">Checking admin access...</div>
+        <div className="text-center text-slate-600">Verifying admin access...</div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Sidebar */}
+      {/* Sidebar (Desktop) */}
       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
         <Sidebar
           open={true}
           onNavigate={navigate}
           user={profile}
-          active="products"
+          active="stockIn"
           theme="dark"
         />
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Sidebar (Mobile) */}
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onNavigate={navigate}
         user={profile}
-        active="products"
+        active="stockIn"
         theme="dark"
       />
 
+      {/* Main Section */}
       <div className="md:pl-72">
         <Topbar
-          title="Add New Product"
+          title={`Add Product • ${profile.email?.split("@")[0]}`}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
 
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="bg-white rounded-2xl shadow-lg p-8 transition hover:shadow-xl">
+        <main className="max-w-4xl mx-auto px-6 py-10">
+          <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition">
             <h2 className="text-2xl font-bold mb-6 text-slate-800">
-              🛒 Add Product to Inventory
+              ➕ Add New Product
             </h2>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Product Name */}
               <div>
                 <label className="block text-sm font-medium text-slate-600">Product Name *</label>
                 <input
@@ -143,11 +154,12 @@ export default function AddProduct() {
                   value={form.name}
                   onChange={handleChange}
                   className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g. Golden Penny Spaghetti"
+                  placeholder="e.g. Milo 500g"
                   required
                 />
               </div>
 
+              {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-slate-600">Category *</label>
                 <input
@@ -156,11 +168,12 @@ export default function AddProduct() {
                   value={form.category}
                   onChange={handleChange}
                   className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g. Pasta & Grains"
+                  placeholder="e.g. Beverages"
                   required
                 />
               </div>
 
+              {/* Price */}
               <div>
                 <label className="block text-sm font-medium text-slate-600">Price (₦) *</label>
                 <input
@@ -174,6 +187,7 @@ export default function AddProduct() {
                 />
               </div>
 
+              {/* Quantity */}
               <div>
                 <label className="block text-sm font-medium text-slate-600">Quantity *</label>
                 <input
@@ -182,30 +196,46 @@ export default function AddProduct() {
                   value={form.quantity}
                   onChange={handleChange}
                   className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g. 100"
+                  placeholder="100"
                   required
                 />
               </div>
 
+              {/* Unit */}
               <div>
-                <label className="block text-sm font-medium text-slate-600">Barcode</label>
+                <label className="block text-sm font-medium text-slate-600">Unit *</label>
+                <input
+                  type="text"
+                  name="unit"
+                  value={form.unit}
+                  onChange={handleChange}
+                  className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  placeholder="e.g. pcs, kg, pack"
+                  required
+                />
+              </div>
+
+              {/* Barcode */}
+              <div>
+                <label className="block text-sm font-medium text-slate-600">Barcode (optional)</label>
                 <input
                   type="text"
                   name="barcode"
                   value={form.barcode}
                   onChange={handleChange}
                   className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Optional"
+                  placeholder="e.g. 0123456789"
                 />
               </div>
 
+              {/* Submit */}
               <div className="flex items-end">
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
                 >
-                  {loading ? "Adding..." : "➕ Add Product"}
+                  {loading ? "Adding..." : "✅ Add Product"}
                 </button>
               </div>
             </form>
