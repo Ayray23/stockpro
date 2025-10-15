@@ -1,4 +1,3 @@
-// src/pages/StockOut.jsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   collection,
@@ -15,6 +14,14 @@ import Sidebar from "../component/sidebar";
 import Topbar from "../component/topbar";
 import { useNavigate } from "react-router-dom";
 
+/**
+ * stockOut.jsx
+ * Checkout / POS Page
+ * - Only accessible by logged-in staff
+ * - Updates product stock & creates transaction record
+ * - Generates a print-ready receipt
+ */
+
 export default function StockOut() {
   const [materials, setMaterials] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -29,7 +36,7 @@ export default function StockOut() {
   // ✅ Auth listener
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => {
-      if (!u) navigate("/login");
+      if (!u) navigate("/auth");
       else setUser(u);
     });
     return () => unsub();
@@ -47,41 +54,37 @@ export default function StockOut() {
   // ✅ Handle checkout
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selected || !quantity)
-      return toast.error("Please select material and quantity");
+    if (!selected || !quantity) return toast.error("Select product and quantity");
 
     try {
       const ref = doc(db, "materials", selected.id);
       const snap = await getDoc(ref);
-      if (!snap.exists()) return toast.error("Item not found");
+      if (!snap.exists()) return toast.error("Product not found");
 
       const data = snap.data();
       const currentQty = data.quantity ?? 0;
-      if (Number(quantity) > currentQty)
-        return toast.error("Insufficient stock");
+      if (Number(quantity) > currentQty) return toast.error("Insufficient stock");
 
       const newQty = currentQty - Number(quantity);
       await updateDoc(ref, { quantity: newQty });
 
-      const sale = {
+      const tx = {
         type: "Stock Out",
         materialId: selected.id,
         materialName: data.name,
         quantity: Number(quantity),
         unit: data.unit,
         note,
+        price: data.price ?? 0,
+        total: (data.price ?? 0) * Number(quantity),
         cashierEmail: user?.email,
         timestamp: serverTimestamp(),
       };
-      const txRef = await addDoc(collection(db, "transactions"), sale);
 
-      toast.success("✅ Checkout completed!");
-      setReceipt({
-        id: txRef.id,
-        ...sale,
-        total: data.price ? data.price * quantity : quantity,
-      });
+      const txRef = await addDoc(collection(db, "transactions"), tx);
 
+      toast.success("✅ Checkout successful!");
+      setReceipt({ id: txRef.id, ...tx });
       setQuantity("");
       setNote("");
       setSelected(null);
@@ -98,34 +101,32 @@ export default function StockOut() {
     w.document.write(`
       <html><head><title>Receipt</title>
       <style>
-        body { font-family: sans-serif; padding: 16px; }
-        h2 { text-align: center; margin-bottom: 10px; }
+        body { font-family: 'Inter', sans-serif; padding: 16px; }
+        h2 { text-align: center; margin-bottom: 8px; color: #2563eb; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        td, th { padding: 4px; border-bottom: 1px solid #ccc; }
-        .total { font-weight: bold; text-align: right; margin-top: 10px; }
-        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+        td, th { padding: 4px; border-bottom: 1px solid #e5e7eb; }
+        .total { font-weight: bold; text-align: right; margin-top: 10px; color: #0f172a; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
       </style></head><body>${content}</body></html>
     `);
     w.document.close();
-    w.focus();
     w.print();
-    w.close();
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800 flex">
-      {/* Sidebar (Desktop + Mobile) */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+      {/* Sidebar (Desktop) */}
       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
         <Sidebar
           open={true}
           onNavigate={(p) => navigate(p)}
           user={{ email: user?.email, role: "staff" }}
-          active="checkout"
+          active="stockOut"
           theme="dark"
         />
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Sidebar (Mobile) */}
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -134,27 +135,28 @@ export default function StockOut() {
           navigate(p);
         }}
         user={{ email: user?.email, role: "staff" }}
-        active="checkout"
+        active="stockOut"
         theme="dark"
       />
 
       {/* Main Content */}
       <div className="flex-1 md:pl-72">
         <Topbar
-          title="Checkout / Stock Out"
+          title={`Checkout • ${user?.email?.split("@")[0] || "Staff"}`}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
 
         <main className="max-w-3xl mx-auto py-12 px-6">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-center mb-6">
-              Checkout Material
+          <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition">
+            <h2 className="text-2xl font-bold text-center text-slate-800 mb-6">
+              🛒 Checkout / Stock Out
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Product Select */}
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Select Material
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  Select Product
                 </label>
                 <select
                   value={selected?.id || ""}
@@ -163,20 +165,21 @@ export default function StockOut() {
                       materials.find((m) => m.id === e.target.value) || null
                     )
                   }
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"
                   required
                 >
-                  <option value="">-- Choose Material --</option>
+                  <option value="">-- Choose Product --</option>
                   {materials.map((mat) => (
                     <option key={mat.id} value={mat.id}>
-                      {mat.name} ({mat.quantity} {mat.unit})
+                      {mat.name} ({mat.quantity} {mat.unit ?? ""})
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Quantity */}
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-medium text-slate-600 mb-1">
                   Quantity
                 </label>
                 <input
@@ -184,29 +187,31 @@ export default function StockOut() {
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   placeholder="Enter quantity"
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"
                   required
                 />
               </div>
 
+              {/* Note */}
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Purpose / Notes
+                <label className="block text-sm font-medium text-slate-600 mb-1">
+                  Notes / Purpose (optional)
                 </label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Optional note"
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                  placeholder="E.g. Customer purchase, internal usage..."
+                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"
                   rows={3}
                 />
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
                 className="w-full py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition"
               >
-                 Complete Checkout
+                ✅ Complete Checkout
               </button>
             </form>
           </div>
@@ -215,10 +220,10 @@ export default function StockOut() {
 
       {/* ✅ Receipt Modal */}
       {receipt && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-[400px] max-w-full p-6 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-[400px] max-w-full p-6">
             <div ref={receiptRef}>
-              <h2> StockPro Receipt</h2>
+              <h2>🧾 StockPro Receipt</h2>
               <p><strong>ID:</strong> {receipt.id}</p>
               <p><strong>Cashier:</strong> {receipt.cashierEmail}</p>
               <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
@@ -227,10 +232,11 @@ export default function StockOut() {
                   <tr>
                     <td>{receipt.materialName}</td>
                     <td>{receipt.quantity} {receipt.unit}</td>
+                    <td>₦{receipt.price?.toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>
-              <div className="total">Total: {receipt.total}</div>
+              <div className="total">Total: ₦{receipt.total?.toLocaleString()}</div>
               {receipt.note && <p><em>Note:</em> {receipt.note}</p>}
               <div className="footer">Thank you for your purchase!</div>
             </div>
