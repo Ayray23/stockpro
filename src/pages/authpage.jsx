@@ -1,26 +1,18 @@
 import React, { useState } from "react";
-import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
+import { auth, db } from "../firebase";
+import { doc, setDoc, getDoc, getDocs, collection } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 /**
- * AuthPage (Login + Signup)
- * - Modern glassy design
- * - Handles both login and signup
- * - Automatically assigns admin to first user
- * - Routes user based on Firestore role
+ * AuthPage.jsx
+ * - Combined Login + Signup page
+ * - Sleek SaaS-style tab switch UI
+ * - First user auto-assigned as admin
  */
 
 export default function AuthPage() {
@@ -31,75 +23,54 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const resetFields = () => {
-    setEmail("");
-    setPassword("");
-    setConfirm("");
-  };
-
+  // 🔹 Handle login or signup
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === "signup") {
-        if (password !== confirm)
-          return toast.error("Passwords do not match ❌");
+        if (password !== confirm) {
+          toast.error("Passwords do not match");
+          return setLoading(false);
+        }
 
-        // create user
-        const userCred = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        // Create new user
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
-        // check if first user → admin
+        // Determine role — first user = admin
         const allUsers = await getDocs(collection(db, "users"));
-        const isFirst = allUsers.empty;
-        const role = isFirst ? "admin" : "staff";
+        const role = allUsers.empty ? "admin" : "staff";
 
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: user.email,
           role,
-          createdAt: serverTimestamp(),
+          createdAt: new Date().toISOString(),
         });
 
-        toast.success(
-          `🎉 Account created! You are logged in as ${role.toUpperCase()}`
-        );
-
-        if (role === "admin") navigate("/adminDashboard");
-        else navigate("/salesDashboard");
+        toast.success(`🎉 Account created successfully as ${role}`);
+        navigate(role === "admin" ? "/adminDashboard" : "/salesDashboard");
       } else {
-        // login flow
-        const userCred = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        // Login
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
-
-        const snap = await getDoc(doc(db, "users", user.uid));
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
 
         if (!snap.exists()) {
-          toast.error("User record not found. Please sign up again.");
-          await auth.signOut();
+          toast.error("Account not found in database");
           return;
         }
 
         const data = snap.data();
-        toast.success(`Welcome back, ${data.role}!`);
-
-        if (data.role === "admin") navigate("/adminDashboard");
-        else navigate("/salesDashboard");
+        toast.success(`👋 Welcome back, ${data.role === "admin" ? "Admin" : "Staff"}`);
+        navigate(data.role === "admin" ? "/adminDashboard" : "/salesDashboard");
       }
-
-      resetFields();
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message || "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -107,77 +78,73 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-700 via-blue-700 to-emerald-600 p-4">
-      <div className="relative w-full max-w-md bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl shadow-2xl p-8 text-white">
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">StockPro</h1>
-          <p className="text-sm text-white/80 mt-1">
-            {mode === "login"
-              ? "Welcome back — please login to continue"
-              : "Create an account to get started"}
-          </p>
+          <h1 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
+            StockPro
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Supermarket POS System</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-white/10 rounded-xl mb-6 overflow-hidden">
-          <button
-            onClick={() => setMode("login")}
-            className={`flex-1 py-2 font-medium transition ${
-              mode === "login"
-                ? "bg-white/30 text-white"
-                : "hover:bg-white/10 text-white/70"
-            }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setMode("signup")}
-            className={`flex-1 py-2 font-medium transition ${
-              mode === "signup"
-                ? "bg-white/30 text-white"
-                : "hover:bg-white/10 text-white/70"
-            }`}
-          >
-            Sign Up
-          </button>
+        <div className="flex justify-center mb-6 border-b border-slate-200">
+          {["login", "signup"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setMode(tab)}
+              className={`flex-1 py-2 font-medium transition-all ${
+                mode === tab
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab === "login" ? "Login" : "Sign Up"}
+            </button>
+          ))}
         </div>
 
-        {/* Auth Form */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm text-white/70 mb-1">Email</label>
+            <label className="block text-sm font-medium text-slate-600">
+              Email Address
+            </label>
             <input
               type="email"
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 text-white focus:ring-2 focus:ring-emerald-400 focus:outline-none"
-              placeholder="you@example.com"
+              className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm text-white/70 mb-1">Password</label>
+            <label className="block text-sm font-medium text-slate-600">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 text-white focus:ring-2 focus:ring-emerald-400 focus:outline-none"
-              placeholder="••••••••"
+              className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
               required
             />
           </div>
 
           {mode === "signup" && (
             <div>
-              <label className="block text-sm text-white/70 mb-1">
+              <label className="block text-sm font-medium text-slate-600">
                 Confirm Password
               </label>
               <input
                 type="password"
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 text-white focus:ring-2 focus:ring-emerald-400 focus:outline-none"
-                placeholder="••••••••"
+                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Confirm password"
                 required
               />
             </div>
@@ -186,27 +153,44 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
           >
             {loading
               ? mode === "login"
-                ? "Signing in..."
-                : "Creating account..."
+                ? "Logging in..."
+                : "Creating Account..."
               : mode === "login"
               ? "Login"
-              : "Create Account"}
+              : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-xs text-center text-white/70 mt-6">
-          By continuing, you agree to StockPro’s{" "}
-          <span className="underline">Terms</span> &{" "}
-          <span className="underline">Privacy Policy</span>.
+        {/* Footer */}
+        <p className="text-sm text-center text-slate-500 mt-6">
+          {mode === "login" ? (
+            <>
+              Don’t have an account?{" "}
+              <button
+                type="button"
+                className="text-indigo-600 font-medium hover:underline"
+                onClick={() => setMode("signup")}
+              >
+                Sign Up
+              </button>
+            </>
+          ) : (
+            <>
+              Already registered?{" "}
+              <button
+                type="button"
+                className="text-indigo-600 font-medium hover:underline"
+                onClick={() => setMode("login")}
+              >
+                Login
+              </button>
+            </>
+          )}
         </p>
-
-        <div className="absolute inset-x-0 bottom-3 text-center text-[10px] text-white/40">
-          © {new Date().getFullYear()} StockPro
-        </div>
       </div>
     </div>
   );
