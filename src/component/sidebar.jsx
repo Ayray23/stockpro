@@ -178,7 +178,7 @@ export default function Sidebar({
 
             <div className="mt-4">
               <button
-                onClick={() => onNavigate("/logout")}
+                onClick={() => onNavigate("/uthPage")}
                 className={`w-full px-3 py-2 rounded-md font-medium transition ${
                   theme === "dark"
                     ? "bg-rose-500 text-white hover:bg-rose-400"

@@ -13,7 +13,7 @@ import StockOutPage from "./pages/stockOutpage";
 import StockTable from "./pages/stockTable";
 import TransactionsTable from "./pages/transactionsTable";
 import SummaryCards from "./pages/summaryCards";
-import UserPage from "./pages/userPage";
+import UserPage from "./pages/userpage";
 
 import Layout from "./component/layout";
 import PrivateRoute from "./component/privateroute";
