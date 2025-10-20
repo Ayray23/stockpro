@@ -56,7 +56,7 @@ export default function Sidebar({
   ];
 
   const staffMenu = [
-    { label: "Checkout", path: "/stock-out" },
+    { label: "Checkout", path: "/stockout" },
     { label: "Transactions", path: "/transactions" },
     { label: "Summary", path: "/summary" },
   ];
