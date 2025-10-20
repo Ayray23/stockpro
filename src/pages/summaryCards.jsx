@@ -42,7 +42,7 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div>
       <div className="min-h-screen bg-slate-50 text-slate-900 flex">
       {/* Sidebar (Desktop) */}
       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
@@ -68,11 +68,14 @@ const Dashboard = () => {
         theme="dark"
       />
       </div>
+    <div className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      
       <SummaryCard title="Total Materials" value={totalMaterials} color="bg-blue-100" />
       <SummaryCard title="Total Stock In" value={totalStockIn} color="bg-green-100" />
       <SummaryCard title="Total Stock Out" value={totalStockOut} color="bg-red-100" />
       <SummaryCard title="Transactions" value={totalTransactions} color="bg-yellow-100" />
       <SummaryCard title="Low Stock Items" value={lowStockCount} color="bg-orange-100" /> {/* 🔴 NEW */}
+    </div>
     </div>
   );
 };
