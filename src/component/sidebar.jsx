@@ -54,7 +54,6 @@ export default function Sidebar({
     { label: "Summary", path: "/summary" },
     { label: "Users", path: "/users" },
   ];
-
   const staffMenu = [
     { label: "Checkout", path: "/stockout" },
     { label: "Transactions", path: "/transactions" },

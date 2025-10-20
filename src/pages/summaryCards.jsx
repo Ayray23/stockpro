@@ -43,6 +43,31 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex">
+      {/* Sidebar (Desktop) */}
+      <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
+        <Sidebar
+          open={true}
+          onNavigate={(p) => navigate(p)}
+          user={{ email: user?.email, role: profile?.role }}
+          active="stockOut"
+          theme="dark"
+        />
+      </div>
+
+      {/* Sidebar (Mobile) */}
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={(p) => {
+          setSidebarOpen(false);
+          navigate(p);
+        }}
+        user={{ email: user?.email, role: profile?.role }}
+        active="stockOut"
+        theme="dark"
+      />
+      </div>
       <SummaryCard title="Total Materials" value={totalMaterials} color="bg-blue-100" />
       <SummaryCard title="Total Stock In" value={totalStockIn} color="bg-green-100" />
       <SummaryCard title="Total Stock Out" value={totalStockOut} color="bg-red-100" />
