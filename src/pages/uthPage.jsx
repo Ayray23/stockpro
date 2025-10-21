@@ -3,20 +3,14 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
 } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Eye, EyeOff } from "lucide-react"; // 👁️ icons
-
-/**
- * AuthPage.jsx
- * - Login + Signup page with Email Verification
- * - Admin signup requires secret code
- * - Includes password visibility toggles and strong validation
- */
+import { Eye, EyeOff, Mail, XCircle } from "lucide-react";
 
 export default function AuthPage() {
   const [mode, setMode] = useState("login"); // 'login' | 'signup'
@@ -27,18 +21,18 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false); // 👈 forgot password modal
   const navigate = useNavigate();
 
-  const ADMIN_CODE = "STOCKPRO-2025"; // 🔒 Change this secret code
+  const ADMIN_CODE = "STOCKPRO-2025";
 
-  // Handle login / signup
+  // 🔹 Handle login / signup
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === "signup") {
-        // 🟢 Signup
         if (password !== confirm) {
           toast.error("Passwords do not match");
           return setLoading(false);
@@ -46,24 +40,19 @@ export default function AuthPage() {
 
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
-
         await sendEmailVerification(user);
-        toast.info("📩 Verification email sent. Please verify before logging in.");
 
         const role = adminCode === ADMIN_CODE ? "admin" : "staff";
-
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: user.email,
           role,
-          verified: false,
           createdAt: new Date().toISOString(),
         });
 
+        toast.success(`🎉 Account created as ${role}. Please verify your email.`);
         await signOut(auth);
-        toast.success(`🎉 Account created as ${role}. Verify your email before login.`);
       } else {
-        // 🔵 Login
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
@@ -73,8 +62,7 @@ export default function AuthPage() {
           return;
         }
 
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
+        const snap = await getDoc(doc(db, "users", user.uid));
         if (!snap.exists()) {
           toast.error("User record not found.");
           await signOut(auth);
@@ -93,20 +81,35 @@ export default function AuthPage() {
     }
   };
 
-  // Handle resend verification
-  const handleResendVerification = async () => {
+  // 🔹 Forgot password handler
+  const handlePasswordReset = async () => {
     if (!email) {
-      toast.error("⚠️ Please enter your email first.");
+      toast.error("Please enter your email address first.");
       return;
     }
 
     try {
-      // Try signing in silently to get user object
+      await sendPasswordResetEmail(auth, email);
+      toast.success("📨 Password reset link sent to your email.");
+      setForgotOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send reset link. Check your email.");
+    }
+  };
+
+  // 🔹 Resend verification
+  const handleResendVerification = async () => {
+    if (!email || !password) {
+      toast.error("⚠️ Enter your email and password first.");
+      return;
+    }
+
+    try {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
-
       if (user.emailVerified) {
-        toast.info("✅ This email is already verified.");
+        toast.info("✅ Email already verified.");
         await signOut(auth);
         return;
       }
@@ -115,7 +118,7 @@ export default function AuthPage() {
       toast.success("📨 Verification email sent again!");
       await signOut(auth);
     } catch (err) {
-      toast.error("Failed to resend verification. Check your email and password.");
+      toast.error("Could not resend verification. Check your credentials.");
     }
   };
 
@@ -150,9 +153,7 @@ export default function AuthPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-600">
-              Email Address
-            </label>
+            <label className="block text-sm font-medium text-slate-600">Email</label>
             <input
               type="email"
               className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -163,14 +164,12 @@ export default function AuthPage() {
             />
           </div>
 
-          {/* Password Field */}
+          {/* Password */}
           <div className="relative">
-            <label className="block text-sm font-medium text-slate-600">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-slate-600">Password</label>
             <input
               type={showPassword ? "text" : "password"}
-              className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-10"
+              className="mt-1 w-full px-4 py-2 pr-10 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
@@ -195,7 +194,7 @@ export default function AuthPage() {
                 </label>
                 <input
                   type={showConfirm ? "text" : "password"}
-                  className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-10"
+                  className="mt-1 w-full px-4 py-2 pr-10 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Confirm password"
@@ -212,7 +211,7 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-600 flex items-center justify-between">
+                <label className="block text-sm font-medium text-slate-600">
                   Admin Access Code{" "}
                   <span className="text-xs text-slate-400">(Optional)</span>
                 </label>
@@ -221,7 +220,7 @@ export default function AuthPage() {
                   className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   value={adminCode}
                   onChange={(e) => setAdminCode(e.target.value)}
-                  placeholder="Enter admin code if you have one"
+                  placeholder="Enter admin code if any"
                 />
               </div>
             </>
@@ -257,8 +256,14 @@ export default function AuthPage() {
                 </button>
               </p>
               <button
-                onClick={handleResendVerification}
+                onClick={() => setForgotOpen(true)}
                 className="text-indigo-500 font-medium hover:underline"
+              >
+                Forgot password?
+              </button>
+              <button
+                onClick={handleResendVerification}
+                className="text-indigo-500 font-medium hover:underline block mx-auto"
               >
                 Resend verification email
               </button>
@@ -277,6 +282,42 @@ export default function AuthPage() {
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {forgotOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm relative">
+            <button
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"
+              onClick={() => setForgotOpen(false)}
+            >
+              <XCircle size={22} />
+            </button>
+            <div className="text-center mb-4">
+              <Mail size={38} className="mx-auto text-indigo-600 mb-2" />
+              <h3 className="text-lg font-semibold text-slate-700">
+                Reset Your Password
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Enter your email to receive a reset link.
+              </p>
+            </div>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              className="w-full mb-4 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <button
+              onClick={handlePasswordReset}
+              className="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"
+            >
+              Send Reset Link
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
