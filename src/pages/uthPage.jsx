@@ -6,15 +6,15 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, setDoc, getDoc, getDocs, collection } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 /**
  * AuthPage.jsx
  * - Login + Signup page with Email Verification
- * - Auto-assign first user as Admin
- * - Prevents unverified login
+ * - Admin signup requires access code
+ * - Modern professional design
  */
 
 export default function AuthPage() {
@@ -22,8 +22,11 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [adminCode, setAdminCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const ADMIN_CODE = "STOCKPRO-2025"; // 🔒 Change this secret code
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,25 +34,23 @@ export default function AuthPage() {
 
     try {
       if (mode === "signup") {
-        // 🟢 Signup Logic
+        // 🟢 Signup Flow
         if (password !== confirm) {
           toast.error("Passwords do not match");
           return setLoading(false);
         }
 
-        // Create user account
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
-        // Send verification email
+        // Send email verification
         await sendEmailVerification(user);
-        toast.info("📩 Verification email sent. Please check your inbox.");
+        toast.info("📩 Verification email sent. Please verify before logging in.");
 
-        // Determine role (first user = admin)
-        const allUsers = await getDocs(collection(db, "users"));
-        const role = allUsers.empty ? "admin" : "staff";
+        // Determine role based on admin code
+        const role = adminCode === ADMIN_CODE ? "admin" : "staff";
 
-        // Save profile
+        // Save user profile
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: user.email,
@@ -58,37 +59,30 @@ export default function AuthPage() {
           createdAt: new Date().toISOString(),
         });
 
-        // Sign out immediately after signup to force verification
-        await signOut(auth);
-        toast.success("🎉 Account created! Please verify your email before login.");
+        await signOut(auth); // Force logout until verified
+        toast.success(`🎉 Account created as ${role}. Verify email before logging in.`);
 
       } else {
-        // 🔵 Login Logic
+        // 🔵 Login Flow
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
-        // Verify email
         if (!user.emailVerified) {
           toast.warn("⚠️ Please verify your email before logging in.");
           await signOut(auth);
           return;
         }
 
-        // Fetch user profile
         const ref = doc(db, "users", user.uid);
         const snap = await getDoc(ref);
-
         if (!snap.exists()) {
-          toast.error("User profile not found in database");
+          toast.error("User record not found in database");
           await signOut(auth);
           return;
         }
 
         const data = snap.data();
-
-        toast.success(
-          `👋 Welcome back, ${data.role === "admin" ? "Admin" : "Staff"}`
-        );
+        toast.success(`👋 Welcome back, ${data.role === "admin" ? "Admin" : "Staff"}`);
         navigate(data.role === "admin" ? "/adminDashboard" : "/salesDashboard");
       }
     } catch (err) {
@@ -110,13 +104,13 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-700 via-blue-700 to-emerald-600 p-4">
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 transition-all hover:shadow-indigo-200">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-indigo-700 tracking-tight">
             StockPro
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Smart POS Management</p>
+          <p className="text-sm text-slate-500 mt-1">Smart Inventory System</p>
         </div>
 
         {/* Tabs */}
@@ -167,19 +161,35 @@ export default function AuthPage() {
           </div>
 
           {mode === "signup" && (
-            <div>
-              <label className="block text-sm font-medium text-slate-600">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Confirm password"
-                required
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-600">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Confirm password"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-600 flex items-center justify-between">
+                  Admin Access Code{" "}
+                  <span className="text-xs text-slate-400">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  placeholder="Enter admin code if you have one"
+                />
+              </div>
+            </>
           )}
 
           <button
