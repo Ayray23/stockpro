@@ -6,15 +6,16 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, setDoc, getDoc, collection } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Eye, EyeOff } from "lucide-react"; // 👁️ icons
 
 /**
  * AuthPage.jsx
  * - Login + Signup page with Email Verification
- * - Admin signup requires access code
- * - Modern professional design
+ * - Admin signup requires secret code
+ * - Includes password visibility toggles and strong validation
  */
 
 export default function AuthPage() {
@@ -23,18 +24,21 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [adminCode, setAdminCode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const ADMIN_CODE = "STOCKPRO-2025"; // 🔒 Change this secret code
 
+  // Handle login / signup
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === "signup") {
-        // 🟢 Signup Flow
+        // 🟢 Signup
         if (password !== confirm) {
           toast.error("Passwords do not match");
           return setLoading(false);
@@ -43,14 +47,11 @@ export default function AuthPage() {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
-        // Send email verification
         await sendEmailVerification(user);
         toast.info("📩 Verification email sent. Please verify before logging in.");
 
-        // Determine role based on admin code
         const role = adminCode === ADMIN_CODE ? "admin" : "staff";
 
-        // Save user profile
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: user.email,
@@ -59,11 +60,10 @@ export default function AuthPage() {
           createdAt: new Date().toISOString(),
         });
 
-        await signOut(auth); // Force logout until verified
-        toast.success(`🎉 Account created as ${role}. Verify email before logging in.`);
-
+        await signOut(auth);
+        toast.success(`🎉 Account created as ${role}. Verify your email before login.`);
       } else {
-        // 🔵 Login Flow
+        // 🔵 Login
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
 
@@ -76,7 +76,7 @@ export default function AuthPage() {
         const ref = doc(db, "users", user.uid);
         const snap = await getDoc(ref);
         if (!snap.exists()) {
-          toast.error("User record not found in database");
+          toast.error("User record not found.");
           await signOut(auth);
           return;
         }
@@ -93,12 +93,29 @@ export default function AuthPage() {
     }
   };
 
+  // Handle resend verification
   const handleResendVerification = async () => {
-    if (auth.currentUser && !auth.currentUser.emailVerified) {
-      await sendEmailVerification(auth.currentUser);
-      toast.info("📨 Verification email resent!");
-    } else {
-      toast.warn("Please log in first to resend verification.");
+    if (!email) {
+      toast.error("⚠️ Please enter your email first.");
+      return;
+    }
+
+    try {
+      // Try signing in silently to get user object
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCred.user;
+
+      if (user.emailVerified) {
+        toast.info("✅ This email is already verified.");
+        await signOut(auth);
+        return;
+      }
+
+      await sendEmailVerification(user);
+      toast.success("📨 Verification email sent again!");
+      await signOut(auth);
+    } catch (err) {
+      toast.error("Failed to resend verification. Check your email and password.");
     }
   };
 
@@ -146,34 +163,52 @@ export default function AuthPage() {
             />
           </div>
 
-          <div>
+          {/* Password Field */}
+          <div className="relative">
             <label className="block text-sm font-medium text-slate-600">
               Password
             </label>
             <input
-              type="password"
-              className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              type={showPassword ? "text" : "password"}
+              className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
 
+          {/* Confirm Password (Signup only) */}
           {mode === "signup" && (
             <>
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-slate-600">
                   Confirm Password
                 </label>
                 <input
-                  type="password"
-                  className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  type={showConfirm ? "text" : "password"}
+                  className="mt-1 w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-10"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Confirm password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+                  tabIndex={-1}
+                >
+                  {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
 
               <div>
