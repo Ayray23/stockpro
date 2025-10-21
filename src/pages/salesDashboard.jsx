@@ -8,7 +8,7 @@ import {
   orderBy,
   limit,
   doc,
-  getDoc,
+  getDoc, // ✅ added missing import
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../component/sidebar";
@@ -71,17 +71,21 @@ export default function SalesDashboard() {
       try {
         setLoading(true);
 
+        // Fetch all materials
         const materialSnap = await getDocs(collection(db, "materials"));
         setMaterials(materialSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
+        // Fetch only this cashier’s last 10 transactions
+        // 🚨 If this throws an index error, comment out orderBy line below
         const txSnap = await getDocs(
           query(
             collection(db, "transactions"),
             where("cashierEmail", "==", profile.email),
-            orderBy("timestamp", "desc"),
+            orderBy("timestamp", "desc"), // ❗ remove if index not created yet
             limit(10)
           )
         );
+
         setTransactions(txSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Data fetch error:", err);
@@ -140,10 +144,7 @@ export default function SalesDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { title: "Total Products", value: materials.length },
-              {
-                title: "Total Transactions",
-                value: transactions.length,
-              },
+              { title: "Total Transactions", value: transactions.length },
               {
                 title: "Low Stock Items",
                 value: materials.filter((m) => m.quantity < 5).length,
@@ -264,7 +265,7 @@ export default function SalesDashboard() {
 
             <div className="mt-6 text-right">
               <button
-                onClick={() => navigate("/stock-out")}
+                onClick={() => navigate("/stockout")}
                 className="bg-emerald-600 text-white rounded-lg py-2 px-4 hover:bg-emerald-700 transition"
               >
                 ➕ Checkout Item
