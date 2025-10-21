@@ -10,10 +10,10 @@ import { auth, db } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Mail, XCircle } from "lucide-react";
+import { Eye, EyeOff, Mail, XCircle, ShieldCheck } from "lucide-react";
 
 export default function AuthPage() {
-  const [mode, setMode] = useState("login"); // 'login' | 'signup'
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -21,10 +21,24 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [forgotOpen, setForgotOpen] = useState(false); // 👈 forgot password modal
+  const [forgotOpen, setForgotOpen] = useState(false);
   const navigate = useNavigate();
 
   const ADMIN_CODE = "STOCKPRO-2025";
+
+  // 🔹 Password Strength Checker
+  const getPasswordStrength = (pass) => {
+    let score = 0;
+    if (pass.length >= 8) score++;
+    if (/[A-Z]/.test(pass)) score++;
+    if (/[0-9]/.test(pass)) score++;
+    if (/[^A-Za-z0-9]/.test(pass)) score++;
+    return score;
+  };
+
+  const strength = getPasswordStrength(password);
+  const strengthLabels = ["Weak", "Fair", "Good", "Strong"];
+  const strengthColors = ["red", "orange", "yellow", "green"];
 
   // 🔹 Handle login / signup
   const handleSubmit = async (e) => {
@@ -35,6 +49,11 @@ export default function AuthPage() {
       if (mode === "signup") {
         if (password !== confirm) {
           toast.error("Passwords do not match");
+          return setLoading(false);
+        }
+
+        if (strength < 2) {
+          toast.error("Password too weak. Use uppercase, numbers, and symbols.");
           return setLoading(false);
         }
 
@@ -50,7 +69,7 @@ export default function AuthPage() {
           createdAt: new Date().toISOString(),
         });
 
-        toast.success(`🎉 Account created as ${role}. Please verify your email.`);
+        toast.success(`🎉 Account created as ${role}. Verify your email.`);
         await signOut(auth);
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
@@ -118,7 +137,7 @@ export default function AuthPage() {
       toast.success("📨 Verification email sent again!");
       await signOut(auth);
     } catch (err) {
-      toast.error("Could not resend verification. Check your credentials.");
+      toast.error("Could not resend verification. Check credentials.");
     }
   };
 
@@ -127,6 +146,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 transition-all hover:shadow-indigo-200">
         {/* Header */}
         <div className="text-center mb-8">
+          <ShieldCheck className="mx-auto text-indigo-600 mb-2" size={44} />
           <h1 className="text-4xl font-extrabold text-indigo-700 tracking-tight">
             StockPro
           </h1>
@@ -152,6 +172,7 @@ export default function AuthPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-slate-600">Email</label>
             <input
@@ -185,6 +206,21 @@ export default function AuthPage() {
             </button>
           </div>
 
+          {/* Password Strength Meter (Signup only) */}
+          {mode === "signup" && password && (
+            <div className="mt-1">
+              <div
+                className={`h-2 rounded-full bg-${strengthColors[strength - 1]}-500 transition-all`}
+                style={{ width: `${(strength / 4) * 100}%` }}
+              ></div>
+              <p
+                className={`text-xs mt-1 font-medium text-${strengthColors[strength - 1]}-600`}
+              >
+                {strengthLabels[strength - 1] || "Too short"}
+              </p>
+            </div>
+          )}
+
           {/* Confirm Password (Signup only) */}
           {mode === "signup" && (
             <>
@@ -210,6 +246,7 @@ export default function AuthPage() {
                 </button>
               </div>
 
+              {/* Admin Code */}
               <div>
                 <label className="block text-sm font-medium text-slate-600">
                   Admin Access Code{" "}
@@ -226,6 +263,7 @@ export default function AuthPage() {
             </>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
