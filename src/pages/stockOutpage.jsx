@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import Sidebar from "../component/sidebar";
 import Topbar from "../component/topbar";
 import { useNavigate } from "react-router-dom";
-// import { ShoppingCart, Printer, X, Check, Search, Trash2 } from "lucide-react";
+import { ShoppingCart, Printer, X, Check, Search, Trash2 } from "lucide-react";
 
 export default function StockOut() {
   const [materials, setMaterials] = useState([]);
