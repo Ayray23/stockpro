@@ -44,7 +44,7 @@ export default function Sidebar({
   const location = useLocation();
   const active = location.pathname;
 
-  // ✅ Menu per role
+  // Menu per role
   const adminMenu = [
     { label: "Dashboard", path: "/adminDashboard" },
     { label: "Add Product", path: "/addProduct" },
@@ -55,7 +55,7 @@ export default function Sidebar({
     { label: "Users", path: "/users" },
   ];
   const staffMenu = [
-    { label: "Checkout", path: "/stockout" },
+    { label: "Checkout", path: "/stockOut" },
     { label: "Transactions", path: "/transactions" },
     { label: "Summary", path: "/summary" },
   ];
