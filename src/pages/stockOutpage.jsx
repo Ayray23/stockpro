@@ -277,6 +277,7 @@ export default function StockOut() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 flex">
       {/* Sidebar (Desktop) */}
       <div className="hidden md:block md:fixed md:inset-y-0 md:w-72">
@@ -568,5 +569,6 @@ export default function StockOut() {
         </div>
       )}
     </div>
+    </>
   );
 }
